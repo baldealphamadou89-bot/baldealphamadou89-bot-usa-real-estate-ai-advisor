@@ -67,3 +67,4 @@ else:
     with col2:
         st.metric(label="Fichier", value=uploaded_file.name[:20] + "...")
 
+
