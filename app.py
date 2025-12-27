@@ -17,9 +17,13 @@ gemini_key = st.secrets.get("GOOGLE_API_KEY")
 maps_key = st.secrets.get("MAPS_API_KEY")
 
 def setup_models(api_key):
-    genai.configure(api_key=api_key)
-    # Utilisation de gemini-1.5-flash pour une meilleure compatibilité et rapidité
-    return genai.GenerativeModel('gemini-1.5-flash')
+    try:
+        genai.configure(api_key=api_key)
+        # Astuce : on utilise 'gemini-1.5-flash-latest' qui est souvent mieux reconnu
+        return genai.GenerativeModel('gemini-1.5-flash-latest')
+    except Exception as e:
+        st.error(f"Erreur de configuration du modèle : {e}")
+        return None
 
 def get_street_view_image(address, api_key):
     base_url = "https://maps.googleapis.com/maps/api/streetview"
@@ -57,21 +61,20 @@ with st.sidebar:
 
 # --- ZONE PRINCIPALE ---
 st.title("🇺🇸 USA Real Estate Investment Advisor")
-st.caption("Système Expert : Intelligence Documentaire + Analyse par Vision Artificielle")
+st.caption("Système Expert : Intelligence Documentaire + Vision IA")
 
 if not gemini_key:
-    st.warning("👈 Veuillez configurer votre clé API dans la barre latérale pour activer l'IA.")
+    st.warning("👈 Veuillez configurer votre clé API dans la barre latérale.")
 else:
     model = setup_models(gemini_key)
     
-    if uploaded_file:
+    if model and uploaded_file:
         with st.spinner("Analyse approfondie en cours..."):
-            pdf_bytes = uploaded_file.read()
-            
-            # 1. Extraction Adresse
-            addr_prompt = f"Extrais uniquement l'adresse complète du bien immobilier de ce document situé en {selected_state}."
             try:
-                # Analyse du PDF pour trouver l'adresse
+                pdf_bytes = uploaded_file.read()
+                
+                # 1. Extraction Adresse
+                addr_prompt = f"Extrais uniquement l'adresse complète du bien immobilier de ce document situé en {selected_state}."
                 addr_res = model.generate_content([addr_prompt, {"mime_type": "application/pdf", "data": pdf_bytes}])
                 address = addr_res.text.strip()
                 
@@ -84,25 +87,25 @@ else:
                     full_prompt = f"""
                     Agis en tant qu'expert en immobilier aux USA. Analyse ce document pour {selected_state}.
                     Donne : 
-                    1. Détail des dettes et priorité des liens (tax liens, mortgages, etc.).
-                    2. Risques juridiques spécifiques à l'état (redemption periods, etc.).
-                    3. Calcul du Max Bid selon la règle des 70% (ARV - repairs - debts).
+                    1. Détail des dettes et priorité des liens.
+                    2. Risques juridiques spécifiques à l'état.
+                    3. Calcul du Max Bid selon la règle des 70%.
                     """
                     report = model.generate_content([full_prompt, {"mime_type": "application/pdf", "data": pdf_bytes}])
                     st.markdown(report.text)
 
                 with col2:
-                    st.subheader("👁️ Inspection du Toit et Façade")
+                    st.subheader("👁️ Inspection Visuelle")
                     if maps_key:
                         img = get_street_view_image(address, maps_key)
                         if img:
-                            st.image(img, use_container_width=True, caption="Vue Street View du bien")
-                            vision_prompt = "Analyse l'état visuel du toit, des fenêtres et de la façade sur cette image. Y a-t-il des signes visibles de dommages ou d'abandon ?"
-                            v_res = model.generate_content([vision_prompt, img])
-                            st.info("Verdict Vision IA :")
+                            st.image(img, use_container_width=True, caption="Vue Street View")
+                            v_res = model.generate_content(["Analyse l'état du toit et des fenêtres.", img])
+                            st.info("Verdict Vision :")
                             st.write(v_res.text)
                     else:
-                        st.info("Ajoutez une clé Maps pour l'inspection visuelle automatique.")
+                        st.info("Ajoutez une clé Maps pour la vision.")
 
             except Exception as e:
                 st.error(f"Erreur d'analyse : {e}")
+                st.info("Conseil : Vérifiez que votre bibliothèque google-generativeai est à jour.")
