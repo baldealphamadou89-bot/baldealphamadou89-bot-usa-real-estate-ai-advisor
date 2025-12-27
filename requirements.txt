@@ -1,5 +1,8 @@
 openai
 streamlit
+streamlit-folium
+folium
 PyPDF2
 Pillow
 requests
+fpdf
