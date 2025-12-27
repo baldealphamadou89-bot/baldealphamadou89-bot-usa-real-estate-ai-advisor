@@ -5,17 +5,23 @@ import requests
 from PIL import Image
 from io import BytesIO
 
-# --- CONFIGURATION ---
-st.set_page_config(page_title="USA Real Estate AI (OpenAI + Vision)", page_icon="🏠", layout="wide")
+# --- CONFIGURATION DE LA PAGE ---
+st.set_page_config(page_title="USA Real Estate AI Advisor", page_icon="🏠", layout="wide")
 
-# Récupération des clés
+# Récupération des clés depuis les Secrets
 openai_key = st.secrets.get("OPENAI_API_KEY")
 maps_key = st.secrets.get("MAPS_API_KEY")
 
 def get_street_view_image(address, api_key):
-    """Récupère l'image de la façade via Google Maps API"""
+    """Appel à l'API Google Street View"""
     base_url = "https://maps.googleapis.com/maps/api/streetview"
-    params = {"size": "600x400", "location": address, "key": api_key, "fov": "90"}
+    params = {
+        "size": "600x400",
+        "location": address,
+        "key": api_key,
+        "fov": "90",
+        "pitch": "0"
+    }
     try:
         response = requests.get(base_url, params=params)
         if response.status_code == 200:
@@ -26,60 +32,61 @@ def get_street_view_image(address, api_key):
 
 # --- BARRE LATÉRALE ---
 with st.sidebar:
-    st.title("⚙️ Configuration")
-    selected_state = st.selectbox("État US", ["Pennsylvania", "Florida", "New Jersey", "New York"])
-    uploaded_file = st.file_uploader("Charger le PDF d'enchère", type="pdf")
+    st.title("⚙️ Paramètres")
+    st.info(f"Analyseur d'enchères immobilières")
+    selected_state = st.selectbox("État visé", ["Pennsylvania", "Florida", "New Jersey", "New York", "California"])
+    uploaded_file = st.file_uploader("Charger le document d'enchère (PDF)", type="pdf")
     
-    if st.button("🗑️ Effacer la session"):
+    if st.button("🗑️ Réinitialiser"):
         st.session_state.clear()
         st.rerun()
 
-# --- ZONE PRINCIPALE ---
-st.title("🏠 USA Real Estate Investment Advisor")
-st.caption("Intelligence Documentaire (GPT-4o) + Inspection Visuelle (Street View)")
+# --- ZONE DE RAPPORT ---
+st.title("🇺🇸 USA Real Estate Investment Advisor")
+st.caption("Intelligence Artificielle GPT-4o + Validation Visuelle Google Street View")
 
 if not openai_key:
-    st.warning("👈 Veuillez configurer votre OPENAI_API_KEY dans les secrets.")
+    st.error("🔑 La clé OPENAI_API_KEY est manquante dans les Secrets.")
 elif uploaded_file:
     client = OpenAI(api_key=openai_key)
     
-    with st.spinner("Analyse approfondie en cours..."):
+    with st.spinner("Analyse du dossier et récupération des visuels..."):
         try:
-            # 1. Extraction du texte du PDF
+            # 1. Lecture du PDF
             reader = PyPDF2.PdfReader(uploaded_file)
-            pdf_text = ""
-            for page in reader.pages:
-                pdf_text += page.extract_text()
+            pdf_text = "".join([page.extract_text() for page in reader.pages])
 
-            # 2. Demander l'adresse exacte à GPT-4o pour Google Maps
+            # 2. Extraction de l'adresse par l'IA
             addr_res = client.chat.completions.create(
                 model="gpt-4o",
-                messages=[{"role": "user", "content": f"Extrais uniquement l'adresse complète du bien immobilier de ce texte : {pdf_text}"}]
+                messages=[{"role": "user", "content": f"Extrais uniquement l'adresse physique complète de ce bien : {pdf_text}"}]
             )
             address = addr_res.choices[0].message.content.strip()
 
-            # 3. Affichage sur deux colonnes
-            col1, col2 = st.columns([3, 2])
+            # 3. Mise en page
+            col1, col2 = st.columns([1, 1])
 
             with col1:
-                st.success(f"📍 Adresse détectée : {address}")
-                st.subheader("📄 Analyse du Dossier")
-                analysis_res = client.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[{"role": "user", "content": f"Analyse les dettes et les risques de ce bien en {selected_state} et donne le Max Bid (70% rule) : {pdf_text}"}]
-                )
-                st.markdown(analysis_res.choices[0].message.content)
-
-            with col2:
-                st.subheader("👁️ Vue Extérieure")
+                st.subheader("👁️ Inspection de la Façade")
                 if maps_key:
                     img = get_street_view_image(address, maps_key)
                     if img:
-                        st.image(img, use_container_width=True, caption=f"Façade détectée à {address}")
+                        st.image(img, use_container_width=True, caption=f"Vue Street View : {address}")
                     else:
-                        st.error("Image Street View non disponible pour cette adresse.")
+                        st.warning("⚠️ Image non trouvée pour cette adresse spécifique.")
                 else:
-                    st.info("Ajoutez votre MAPS_API_KEY pour voir la photo du bien.")
+                    st.info("💡 Ajoutez MAPS_API_KEY pour voir l'image.")
+
+            with col2:
+                st.subheader("📄 Analyse Financière & Juridique")
+                report_res = client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[
+                        {"role": "system", "content": f"Tu es un analyste expert en saisies immobilières en {selected_state}."},
+                        {"role": "user", "content": f"Analyse les dettes, la priorité des liens et calcule le Max Bid (70% rule) : {pdf_text}"}
+                    ]
+                )
+                st.markdown(report_res.choices[0].message.content)
 
         except Exception as e:
-            st.error(f"Erreur lors de l'analyse : {e}")
+            st.error(f"Erreur technique : {e}")
