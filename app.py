@@ -1,67 +1,57 @@
 import streamlit as st
-import google.generativeai as genai
+from openai import OpenAI
 import requests
 from PIL import Image
 from io import BytesIO
 
 # --- CONFIGURATION ---
-st.set_page_config(page_title="USA Real Estate AI", page_icon="🏠", layout="wide")
+st.set_page_config(page_title="USA Real Estate AI (OpenAI)", page_icon="🏠", layout="wide")
 
-gemini_key = st.secrets.get("GOOGLE_API_KEY") or st.sidebar.text_input("Gemini Key", type="password")
-maps_key = st.secrets.get("MAPS_API_KEY") or st.sidebar.text_input("Maps Key", type="password")
+# Récupération de la nouvelle clé
+openai_key = st.secrets.get("OPENAI_API_KEY")
+maps_key = st.secrets.get("MAPS_API_KEY")
 
-def get_model(api_key):
-    try:
-        genai.configure(api_key=api_key)
-        # Test de plusieurs variantes de noms pour contourner l'erreur 404
-        for name in ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-pro']:
-            try:
-                m = genai.GenerativeModel(name)
-                # Petit test de connectivité
-                m.generate_content("test") 
-                return m
-            except:
-                continue
-        return None
-    except:
-        return None
+if openai_key:
+    client = OpenAI(api_key=openai_key)
 
-# --- INTERFACE ---
-st.title("🏠 USA Real Estate Investment Advisor")
-st.caption("Expertise Bancaire (ex-Ecobank) + Intelligence Artificielle")
+# --- ZONE PRINCIPALE ---
+st.title("🇺🇸 USA Real Estate AI Advisor (Powered by GPT-4o)")
 
-if not gemini_key:
-    st.warning("👈 Entrez votre clé API dans la barre latérale.")
+if not openai_key:
+    st.warning("👈 Veuillez ajouter votre clé OPENAI_API_KEY dans les secrets.")
 else:
-    model = get_model(gemini_key)
-    
-    uploaded_file = st.sidebar.file_uploader("Charger le PDF d'enchère", type="pdf")
-    selected_state = st.sidebar.selectbox("État", ["Pennsylvania", "Florida", "New York", "California"])
+    with st.sidebar:
+        st.header("📋 Options")
+        selected_state = st.selectbox("État US", ["Pennsylvania", "Florida", "New York"])
+        uploaded_file = st.file_uploader("Charger le PDF d'enchère", type="pdf")
 
-    if uploaded_file and model:
-        with st.spinner("Analyse en cours..."):
-            try:
-                pdf_data = uploaded_file.read()
-                
-                # 1. Extraction Adresse
-                res_addr = model.generate_content([
-                    "Extrais l'adresse complète de ce document PDF.",
-                    {"mime_type": "application/pdf", "data": pdf_data}
-                ])
-                address = res_addr.text.strip()
-                
-                col1, col2 = st.columns([2, 1])
-                with col1:
-                    st.success(f"📍 Adresse : {address}")
-                    prompt = f"Analyse ce document pour une enchère en {selected_state}. Liste les dettes et calcule le Max Bid (70% rule)."
-                    report = model.generate_content([prompt, {"mime_type": "application/pdf", "data": pdf_data}])
-                    st.markdown(report.text)
-                
-                with col2:
-                    if maps_key:
-                        st.subheader("👁️ Vision")
-                        st.info("Récupération de la façade via Google Maps...")
-                        # (La fonction Street View reste la même)
-            except Exception as e:
-                st.error(f"Erreur d'analyse : {e}")
-                st.info("Vérifiez que 'Generative Language API' est bien ACTIVÉE dans votre console Google Cloud.")
+    if uploaded_file:
+        with st.spinner("Analyse par GPT-4o en cours..."):
+            # Note: Pour OpenAI, on extrait le texte du PDF car GPT-4o 
+            # préfère le texte direct ou les images.
+            import PyPDF2
+            reader = PyPDF2.PdfReader(uploaded_file)
+            pdf_text = ""
+            for page in reader.pages:
+                pdf_text += page.extract_text()
+
+            # 1. Extraction Adresse
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": "Tu es un expert immobilier US."},
+                    {"role": "user", "content": f"Donne l'adresse uniquement : {pdf_text}"}
+                ]
+            )
+            address = response.choices[0].message.content
+            st.success(f"📍 Adresse : {address}")
+
+            # 2. Analyse Financière
+            # On demande l'analyse des dettes comme vous le faisiez chez Ecobank
+            report_res = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "user", "content": f"Analyse ces dettes et calcule le Max Bid (70% rule) pour cet immeuble en {selected_state}: {pdf_text}"}
+                ]
+            )
+            st.markdown(report_res.choices[0].message.content)
