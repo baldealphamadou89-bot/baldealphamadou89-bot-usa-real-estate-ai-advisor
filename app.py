@@ -4,7 +4,6 @@ import PyPDF2
 from fpdf import FPDF
 import base64
 import requests
-from io import BytesIO
 
 # --- CONFIGURATION INITIALE ---
 st.set_page_config(page_title="Alpha Balde | Real Estate AI", page_icon="🏠", layout="wide")
@@ -12,10 +11,10 @@ st.set_page_config(page_title="Alpha Balde | Real Estate AI", page_icon="🏠", 
 openai_key = st.secrets.get("OPENAI_API_KEY")
 maps_key = st.secrets.get("MAPS_API_KEY")
 
-# --- FONCTION POUR LE LOGO (MÉTHODE INFAILLIBLE) ---
+# --- LOGO EN BASE64 (MÉTHODE INFAILLIBLE) ---
 def get_base64_logo():
-    # Lien direct vers l'image de la maison rouge et des clés que vous avez fournie
-    url = "https://img.freepik.com/vecteurs-premium/cle-maison-concept-immobilier_24877-21141.jpg"
+    # URL de l'image sélectionnée pour le logo
+    url = "[attachment_0](attachment)"
     try:
         response = requests.get(url)
         return base64.b64encode(response.content).decode()
@@ -29,19 +28,18 @@ def create_pdf(address, analysis_text, lang):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", 'B', 16)
-    title = "Real Estate Report" if lang == "English" else "Rapport Immobilier" if lang == "Français" else "Informe Inmobiliario"
-    pdf.cell(200, 10, title, ln=True, align='C')
+    title = {"English": "Real Estate Report", "Français": "Rapport Immobilier", "Español": "Informe Inmobiliario"}
+    pdf.cell(200, 10, title.get(lang, "Report"), ln=True, align='C')
     pdf.ln(10)
     pdf.set_font("Arial", 'B', 12)
     pdf.cell(200, 10, f"Address: {address}", ln=True)
     pdf.ln(5)
     pdf.set_font("Arial", '', 11)
-    # Nettoyage des caractères spéciaux
     clean_text = analysis_text.encode('latin-1', 'replace').decode('latin-1')
     pdf.multi_cell(0, 10, clean_text)
     return pdf.output(dest='S').encode('latin-1')
 
-# --- TRADUCTIONS (INCLUANT L'ESPAGNOL) ---
+# --- TRADUCTIONS ---
 languages = {
     "English": {
         "welcome": "USA Real Estate AI Advisor",
@@ -88,17 +86,15 @@ with col_title:
 st.info(t['obj'])
 st.divider()
 
-# --- LOGIQUE D'ANALYSE ---
+# --- ANALYSE ---
 uploaded_file = st.sidebar.file_uploader("Upload PDF", type="pdf")
 
 if uploaded_file:
     client = OpenAI(api_key=openai_key)
     with st.spinner("Processing..."):
-        # Extraction Texte
         reader = PyPDF2.PdfReader(uploaded_file)
         pdf_text = "".join([p.extract_text() for p in reader.pages])
 
-        # Extraction Adresse
         addr_res = client.chat.completions.create(
             model="gpt-4o",
             messages=[{"role": "user", "content": f"Return ONLY the address: {pdf_text}"}]
@@ -117,20 +113,14 @@ if uploaded_file:
             analysis = client.chat.completions.create(
                 model="gpt-4o",
                 messages=[{"role": "system", "content": f"Reply in {selected_lang}"},
-                          {"role": "user", "content": f"Analyze debts and liens: {pdf_text}"}]
+                          {"role": "user", "content": f"Analyze debts: {pdf_text}"}]
             )
             report_text = analysis.choices[0].message.content
             st.markdown(report_text)
 
-            # --- BOUTON DE TÉLÉCHARGEMENT PDF ---
+            # BOUTON PDF
             st.divider()
             pdf_data = create_pdf(address, report_text, selected_lang)
-            st.download_button(
-                label=t["save_btn"],
-                data=pdf_data,
-                file_name=f"Expertise_Alpha_Balde.pdf",
-                mime="application/pdf"
-            )
+            st.download_button(label=t["save_btn"], data=pdf_data, file_name="Report_AlphaBalde.pdf", mime="application/pdf")
 
-# --- PIED DE PAGE ---
-st.markdown(f'<div style="text-align: center; margin-top: 50px; color: grey; font-size: 0.8em;">© 2025 Alpha Balde | AI & Banking Expertise</div>', unsafe_allow_html=True)
+st.markdown(f'<div style="text-align: center; margin-top: 50px; color: grey;">© 2025 Alpha Balde | AI & Banking Expertise</div>', unsafe_allow_html=True)
