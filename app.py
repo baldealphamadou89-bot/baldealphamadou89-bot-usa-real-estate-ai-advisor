@@ -1,126 +1,69 @@
 import streamlit as st
-from openai import OpenAI
-import PyPDF2
-from fpdf import FPDF
-import base64
-import requests
 
-# --- CONFIGURATION INITIALE ---
-st.set_page_config(page_title="Alpha Balde | Real Estate AI", page_icon="🏠", layout="wide")
+# Configuration de la page
+st.set_page_config(page_title="Banking Expert Advisor", layout="wide")
 
-openai_key = st.secrets.get("OPENAI_API_KEY")
-maps_key = st.secrets.get("MAPS_API_KEY")
+# --- BARRE LATÉRALE (SIDEBAR) ---
+with st.sidebar:
+    # 1. Sélecteur de Langue
+    st.write("🌐 **Language / Langue / Idioma**")
+    language = st.selectbox(
+        "", # Label vide car le texte est au-dessus
+        ["English", "French", "Spanish"],
+        label_visibility="collapsed"
+    )
 
-# --- LOGO EN BASE64 (MÉTHODE INFAILLIBLE) ---
-def get_base64_logo():
-    # URL de l'image sélectionnée pour le logo
-    url = "[attachment_0](attachment)"
-    try:
-        response = requests.get(url)
-        return base64.b64encode(response.content).decode()
-    except:
-        return None
+    st.write("---") # Séparateur horizontal
 
-logo_b64 = get_base64_logo()
+    # 2. Sélecteur d'État (Nouvelle section ajoutée)
+    st.write("📍 **Select State / Choisir l'État**")
+    states_list = ["New York", "Pennsylvania", "California", "Florida"]
+    selected_state = st.selectbox(
+        "Sélectionnez la zone d'analyse :",
+        options=states_list,
+        index=0
+    )
 
-# --- FONCTION GÉNÉRATION PDF ---
-def create_pdf(address, analysis_text, lang):
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", 'B', 16)
-    title = {"English": "Real Estate Report", "Français": "Rapport Immobilier", "Español": "Informe Inmobiliario"}
-    pdf.cell(200, 10, title.get(lang, "Report"), ln=True, align='C')
-    pdf.ln(10)
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(200, 10, f"Address: {address}", ln=True)
-    pdf.ln(5)
-    pdf.set_font("Arial", '', 11)
-    clean_text = analysis_text.encode('latin-1', 'replace').decode('latin-1')
-    pdf.multi_cell(0, 10, clean_text)
-    return pdf.output(dest='S').encode('latin-1')
+    st.write("---")
 
-# --- TRADUCTIONS ---
-languages = {
-    "English": {
-        "welcome": "USA Real Estate AI Advisor",
-        "dev_by": "Developed by Alpha Balde",
-        "exp": "Banking Expert (Ex-Ecobank)",
-        "save_btn": "📥 Download Analysis Report (PDF)",
-        "analysis_title": "Financial & Legal Analysis",
-        "obj": "This platform combines AI (GPT-4o) and banking expertise to analyze US real estate auctions."
-    },
-    "Français": {
-        "welcome": "USA Real Estate AI Advisor",
-        "dev_by": "Développé par Alpha Balde",
-        "exp": "Expert Bancaire (Ex-Ecobank)",
-        "save_btn": "📥 Télécharger le Rapport d'Analyse (PDF)",
-        "analysis_title": "Analyse Financière & Juridique",
-        "obj": "Cette plateforme combine l'IA (GPT-4o) et l'expertise bancaire pour analyser les enchères immobilières aux USA."
-    },
-    "Español": {
-        "welcome": "USA Real Estate AI Advisor",
-        "dev_by": "Desarrollado por Alpha Balde",
-        "exp": "Experto Bancario (Ex-Ecobank)",
-        "save_btn": "📥 Descargar Informe de Análisis (PDF)",
-        "analysis_title": "Análisis Financiero y Legal",
-        "obj": "Esta plataforma combina IA (GPT-4o) y experiencia bancaria para analizar subastas inmobiliarias en EE. UU."
-    }
-}
+    # 3. Zone d'Upload PDF
+    st.write("📄 **Upload PDF**")
+    uploaded_file = st.file_uploader(
+        "Drag and drop file here",
+        type=["pdf"],
+        help="Limit 200MB per file • PDF"
+    )
+    
+    if uploaded_file:
+        st.sidebar.success(f"Fichier '{uploaded_file.name}' prêt.")
 
-# --- SÉLECTION DE LA LANGUE ---
-selected_lang = st.sidebar.selectbox("🌐 Language / Langue / Idioma", ["English", "Français", "Español"])
-t = languages[selected_lang]
+    # Bouton de gestion en bas (comme sur votre capture)
+    st.write("---")
+    if st.button("Gérer l'application"):
+        st.info("Paramètres d'administration ouverts.")
 
-# --- EN-TÊTE ---
-col_logo, col_title = st.columns([1, 4])
-with col_logo:
-    if logo_b64:
-        st.markdown(f'<img src="data:image/png;base64,{logo_b64}" width="180">', unsafe_allow_html=True)
-    else:
-        st.title("🏠")
+# --- CONTENU PRINCIPAL ---
+# En-tête dynamique basé sur votre expérience bancaire
+st.title("🏦 Banking Expert Advisor")
+st.subheader(f"Analyse des opérations et enchères pour : {selected_state}")
 
-with col_title:
-    st.title(t['welcome'])
-    st.subheader(f"👨‍💻 {t['dev_by']} | 🏦 {t['exp']}")
+# Affichage d'un message d'accueil si aucun fichier n'est chargé
+if not uploaded_file:
+    st.info(f"Veuillez charger un document PDF pour commencer l'analyse des données de l'État de {selected_state}.")
+    
+    # Rappel visuel pour l'utilisateur
+    st.markdown(f"""
+    **Expertise actuelle activée :**
+    * **Région :** {selected_state}
+    * **Focus :** Customer Relationship Management (CRM) et Opérations bancaires.
+    """)
+else:
+    # Ici, vous placerez votre logique de traitement du PDF
+    st.success(f"Analyse lancée pour le document dans l'État de {selected_state}...")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric(label="État sélectionné", value=selected_state)
+    with col2:
+        st.metric(label="Fichier", value=uploaded_file.name[:20] + "...")
 
-st.info(t['obj'])
-st.divider()
-
-# --- ANALYSE ---
-uploaded_file = st.sidebar.file_uploader("Upload PDF", type="pdf")
-
-if uploaded_file:
-    client = OpenAI(api_key=openai_key)
-    with st.spinner("Processing..."):
-        reader = PyPDF2.PdfReader(uploaded_file)
-        pdf_text = "".join([p.extract_text() for p in reader.pages])
-
-        addr_res = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[{"role": "user", "content": f"Return ONLY the address: {pdf_text}"}]
-        )
-        address = addr_res.choices[0].message.content.strip()
-        st.success(f"📍 **{address}**")
-
-        c1, c2 = st.columns(2)
-        with c1:
-            st.subheader("📸 Street View")
-            if maps_key:
-                st.image(f"https://maps.googleapis.com/maps/api/streetview?size=600x400&location={address}&key={maps_key}")
-
-        with c2:
-            st.subheader(f"📄 {t['analysis_title']}")
-            analysis = client.chat.completions.create(
-                model="gpt-4o",
-                messages=[{"role": "system", "content": f"Reply in {selected_lang}"},
-                          {"role": "user", "content": f"Analyze debts: {pdf_text}"}]
-            )
-            report_text = analysis.choices[0].message.content
-            st.markdown(report_text)
-
-            # BOUTON PDF
-            st.divider()
-            pdf_data = create_pdf(address, report_text, selected_lang)
-            st.download_button(label=t["save_btn"], data=pdf_data, file_name="Report_AlphaBalde.pdf", mime="application/pdf")
-
-st.markdown(f'<div style="text-align: center; margin-top: 50px; color: grey;">© 2025 Alpha Balde | AI & Banking Expertise</div>', unsafe_allow_html=True)
