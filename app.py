@@ -17,15 +17,17 @@ gemini_key = st.secrets.get("GOOGLE_API_KEY")
 maps_key = st.secrets.get("MAPS_API_KEY")
 
 def setup_models(api_key):
+    """Initialise le modèle avec gestion d'erreurs et fallback"""
     try:
         genai.configure(api_key=api_key)
-        # Astuce : on utilise 'gemini-1.5-flash-latest' qui est souvent mieux reconnu
-        return genai.GenerativeModel('gemini-1.5-flash-latest')
+        # On essaie d'abord la version la plus stable (Flash)
+        return genai.GenerativeModel('gemini-1.5-flash')
     except Exception as e:
-        st.error(f"Erreur de configuration du modèle : {e}")
+        st.error(f"Erreur de configuration : {e}")
         return None
 
 def get_street_view_image(address, api_key):
+    """Récupère l'image de la façade via Google Maps API"""
     base_url = "https://maps.googleapis.com/maps/api/streetview"
     params = {"size": "600x400", "location": address, "key": api_key, "fov": "90"}
     try:
@@ -43,12 +45,12 @@ with st.sidebar:
     if not gemini_key:
         gemini_key = st.text_input("1. Entrez votre Gemini API Key", type="password")
     else:
-        st.success("✅ Clé Gemini chargée via Secrets")
+        st.success("✅ Clé Gemini chargée (Secrets)")
         
     if not maps_key:
-        maps_key = st.text_input("2. Entrez Google Maps API Key (Optionnel)", type="password")
+        maps_key = st.text_input("2. Entrez Google Maps API Key", type="password")
     else:
-        st.success("✅ Clé Maps chargée via Secrets")
+        st.success("✅ Clé Maps chargée (Secrets)")
 
     st.divider()
     st.header("📋 Analyse de l'Enchère")
@@ -61,10 +63,10 @@ with st.sidebar:
 
 # --- ZONE PRINCIPALE ---
 st.title("🇺🇸 USA Real Estate Investment Advisor")
-st.caption("Système Expert : Intelligence Documentaire + Vision IA")
+st.caption("Expertise Bancaire (ex-Ecobank) + Intelligence Documentaire & Vision IA")
 
 if not gemini_key:
-    st.warning("👈 Veuillez configurer votre clé API dans la barre latérale.")
+    st.warning("👈 Veuillez configurer votre clé API Gemini dans la barre latérale.")
 else:
     model = setup_models(gemini_key)
     
@@ -100,12 +102,14 @@ else:
                         img = get_street_view_image(address, maps_key)
                         if img:
                             st.image(img, use_container_width=True, caption="Vue Street View")
-                            v_res = model.generate_content(["Analyse l'état du toit et des fenêtres.", img])
-                            st.info("Verdict Vision :")
+                            v_res = model.generate_content(["Analyse l'état visuel du toit, des fenêtres et de la façade.", img])
+                            st.info("Verdict Vision IA :")
                             st.write(v_res.text)
+                        else:
+                            st.error("Impossible de récupérer l'image de la façade.")
                     else:
-                        st.info("Ajoutez une clé Maps pour la vision.")
+                        st.info("Ajoutez une clé Maps pour activer la vision.")
 
             except Exception as e:
                 st.error(f"Erreur d'analyse : {e}")
-                st.info("Conseil : Vérifiez que votre bibliothèque google-generativeai est à jour.")
+                st.info("💡 Conseil : Vérifiez que l'API Generative Language est bien activée sur votre console Google Cloud.")
