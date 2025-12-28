@@ -37,13 +37,6 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
         color: #333; 
     }
-    .roi-card {
-        background-color: #fff3f3;
-        padding: 20px;
-        border-radius: 15px;
-        border: 2px dashed #d32f2f;
-        text-align: center;
-    }
     h1, h2, h3 { color: #1e1e1e; font-family: 'Helvetica Neue', sans-serif; }
     </style>
     """, unsafe_allow_html=True)
@@ -55,16 +48,17 @@ def get_base64_logo(file_path):
             return base64.b64encode(f.read()).decode()
     return None
 
-def create_pdf(address, analysis, state, max_bid, lang):
+def create_pdf(address, analysis, state, lang, max_bid=0):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", 'B', 16)
     pdf.cell(200, 10, f"Investment Analysis Report: {state}", ln=True, align='C')
     pdf.ln(10)
     pdf.set_font("Arial", 'B', 12)
-    pdf.set_text_color(211, 47, 47)
-    pdf.cell(200, 10, f"MAX BID LIMIT (70% Rule): ${max_bid:,.2f}", ln=True)
-    pdf.set_text_color(0, 0, 0)
+    if max_bid > 0:
+        pdf.set_text_color(211, 47, 47)
+        pdf.cell(200, 10, f"MAX BID LIMIT (70% Rule): ${max_bid:,.2f}", ln=True)
+        pdf.set_text_color(0, 0, 0)
     pdf.cell(200, 10, f"Property: {address}", ln=True)
     pdf.ln(5)
     pdf.set_font("Arial", '', 11)
@@ -82,7 +76,7 @@ languages = {
         "save_btn": "Download Expert Report (PDF)",
         "exp_text": "Banking Expert (Ex-Ecobank)",
         "landing_msg": "Please upload a document to begin the expert analysis.",
-        "max_bid_label": "MAX BID (70% Rule)"
+        "max_bid_label": "Max Bid (70% Rule)"
     },
     "Français": {
         "welcome": "USA Real Estate AI Advisor",
@@ -92,7 +86,7 @@ languages = {
         "save_btn": "Télécharger le Rapport d'Expert (PDF)",
         "exp_text": "Expert Bancaire (Ex-Ecobank)",
         "landing_msg": "Veuillez charger un document pour commencer l'analyse d'expert.",
-        "max_bid_label": "OFFRE MAX (Règle des 70%)"
+        "max_bid_label": "Offre Max (Règle 70%)"
     },
     "Español": {
         "welcome": "USA Real Estate AI Advisor",
@@ -102,7 +96,7 @@ languages = {
         "save_btn": "Descargar Informe de Experto (PDF)",
         "exp_text": "Experto Bancario (Ex-Ecobank)",
         "landing_msg": "Por favor, cargue un documento para comenzar el análisis experto.",
-        "max_bid_label": "PUJA MÁXIMA (Regla del 70%)"
+        "max_bid_label": "Puja Máxima (Regla 70%)"
     }
 }
 
@@ -111,6 +105,8 @@ with st.sidebar:
     logo_data = get_base64_logo("logo.png.jpeg")
     if logo_data:
         st.markdown(f'<div style="text-align: center;"><img src="data:image/jpeg;base64,{logo_data}" width="140"></div>', unsafe_allow_html=True)
+    else:
+        st.markdown("<h1 style='text-align: center;'>🏠</h1>", unsafe_allow_html=True)
     
     st.markdown("---")
     selected_lang = st.selectbox("🌐 Language / Idioma", ["English", "Français", "Español"])
@@ -118,17 +114,16 @@ with st.sidebar:
     
     states_list = ["New York", "New Jersey", "Pennsylvania", "California", "Florida", "Texas", "Maryland"]
     selected_state = st.selectbox(f"📍 {t['state_label']}", states_list)
-    
-    st.markdown("### 💰 Financial Data")
-    arv = st.number_input("Estimated ARV ($)", min_value=0, value=250000, step=5000)
-    repairs = st.number_input("Estimated Repairs ($)", min_value=0, value=30000, step=1000)
+
+    # --- PRINCIPE DE CALCUL (70% RULE) ---
+    st.markdown("### 📊 Financial Calculator")
+    arv = st.number_input("After Repair Value (ARV $)", min_value=0, value=200000)
+    repairs = st.number_input("Estimated Repairs ($)", min_value=0, value=30000)
+    max_bid = (arv * 0.70) - repairs
     
     st.markdown("---")
     uploaded_file = st.file_uploader(t['upload_label'], type="pdf")
     st.markdown(f'<p style="font-size: 0.85em; color: #d32f2f; text-align: center; font-weight: bold;">{t["exp_text"]}</p>', unsafe_allow_html=True)
-
-# --- CALCUL DE L'OFFRE MAXIMALE ---
-max_bid = (arv * 0.70) - repairs
 
 # --- 6. CORPS DE L'APPLICATION ---
 st.markdown(f"<h1 style='text-align: center; margin-bottom: 0;'>{t['welcome']}</h1>", unsafe_allow_html=True)
@@ -136,19 +131,19 @@ st.markdown(f"<p style='text-align: center; color: #d32f2f; font-weight: bold; f
 
 if uploaded_file:
     if "OPENAI_API_KEY" not in st.secrets:
-        st.error("Missing OpenAI API Key.")
+        st.error("Missing OpenAI API Key in Streamlit Secrets.")
     else:
         client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
         
-        with st.spinner(f"Analyse financière et juridique..."):
+        with st.spinner(f"Analyse des spécificités juridiques de {selected_state}..."):
             reader = PyPDF2.PdfReader(uploaded_file)
             pdf_text = "".join([p.extract_text() for p in reader.pages])
 
             response = client.chat.completions.create(
                 model="gpt-4o",
                 messages=[
-                    {"role": "system", "content": f"Tu es Alpha Balde, expert bancaire. Analyse selon les lois de {selected_state}. Réponds en {selected_lang}. L'investisseur applique la règle des 70%."},
-                    {"role": "user", "content": f"Données : ARV={arv}, Travaux={repairs}, Offre Max={max_bid}. Analyse le document et valide la rentabilité : {pdf_text}"}
+                    {"role": "system", "content": f"Tu es Alpha Balde, expert bancaire. Analyse selon les lois de {selected_state}. Réponds en {selected_lang}."},
+                    {"role": "user", "content": f"Analyse les risques pour ce document. Note: L'offre max calculée est de ${max_bid}. : {pdf_text}"}
                 ]
             )
             report_text = response.choices[0].message.content
@@ -159,22 +154,15 @@ if uploaded_file:
             )
             address = addr_res.choices[0].message.content.strip()
 
-        # --- 7. AFFICHAGE DU DASHBOARD ---
+        # --- 7. AFFICHAGE DES RÉSULTATS (DASHBOARD) ---
         st.markdown("---")
         
-        # Indicateurs financiers et juridiques
+        # Indicateurs KPIs (Incluant le calcul de l'offre Max)
         k1, k2, k3 = st.columns(3)
-        k1.metric("State", selected_state)
-        k2.metric("ARV / Value", f"${arv:,}")
-        with k3:
-            st.markdown(f"""
-                <div class="roi-card">
-                    <p style="margin:0; font-size:0.8em; color:#d32f2f; font-weight:bold;">{t['max_bid_label']}</p>
-                    <h2 style="margin:0; color:#d32f2f;">${max_bid:,.0f}</h2>
-                </div>
-            """, unsafe_allow_html=True)
+        k1.metric("Jurisdiction", selected_state)
+        k2.metric("Analysis Mode", "Expert Banking")
+        k3.metric(t['max_bid_label'], f"${max_bid:,.0f}")
 
-        st.markdown("<br>", unsafe_allow_html=True)
         col1, col2 = st.columns([1, 1.3], gap="large")
         
         with col1:
@@ -183,14 +171,14 @@ if uploaded_file:
                 maps_url = f"https://maps.googleapis.com/maps/api/streetview?size=600x400&location={address}, {selected_state}&key={st.secrets['MAPS_API_KEY']}"
                 st.image(maps_url, use_container_width=True, caption=f"Address: {address}")
             else:
-                st.info(f"📍 Detected: {address}")
+                st.info(f"📍 Property detected: {address}")
 
         with col2:
             st.subheader(f"📄 {t['analysis_header']}")
             st.markdown(f'<div class="report-card">{report_text}</div>', unsafe_allow_html=True)
             
             st.markdown("<br>", unsafe_allow_html=True)
-            pdf_data = create_pdf(address, report_text, selected_state, max_bid, selected_lang)
+            pdf_data = create_pdf(address, report_text, selected_state, selected_lang, max_bid)
             st.download_button(
                 label=f"📥 {t['save_btn']}",
                 data=pdf_data,
@@ -204,13 +192,13 @@ else:
     
     c1, c2, c3 = st.columns(3)
     with c1:
-        st.markdown("### 🏦 Banking DNA")
-        st.write("Expertise from Ecobank Guinea applied to US Real Estate.")
+        st.markdown("### 🏦 Banking Expertise & Pursuit AI Native")
+        st.write("Leveraging 5+ years at Ecobank Guinea in cash operations and CRM.")
     with c2:
-        st.markdown("### 📊 70% Rule")
-        st.write("Automatic calculation of your maximum safe bid to protect your ROI.")
+        st.markdown("### ⚖️ State Compliance")
+        st.write(f"Tailored rules for: {', '.join(states_list)}.")
     with c3:
-        st.markdown("### 🚀 AI Native")
-        st.write("Deep document analysis powered by GPT-4o.")
+        st.markdown("### 🚀 AI Precision")
+        st.write("Advanced GPT-4o analysis for deep lien detection and risk assessment.")
 
 st.markdown("<br><hr><center>© 2025 Alpha Balde | USA Real Estate Advisor / AI Native</center>", unsafe_allow_html=True)
