@@ -198,4 +198,5 @@ else:
         st.markdown("### 🚀 AI Precision")
         st.write("Advanced GPT-4o analysis for deep lien detection and risk assessment.")
 
-st.markdown("<br><hr><center>© 2025 Alpha Balde | Real Estate Banking Intelligence</center>", unsafe_allow_html=True)
+st.markdown("<br><hr><center>© 2025 Alpha Balde |USA Real Estate Advisor / AI Native</center>", unsafe_allow_html=True)
+
