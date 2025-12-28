@@ -189,7 +189,7 @@ else:
     
     c1, c2, c3 = st.columns(3)
     with c1:
-        st.markdown("### 🏦 Banking Expertise")
+        st.markdown("### 🏦 Banking Expertise & Pursuit AI Native")
         st.write("Leveraging 5+ years at Ecobank Guinea in cash operations and CRM.")
     with c2:
         st.markdown("### ⚖️ State Compliance")
@@ -199,4 +199,5 @@ else:
         st.write("Advanced GPT-4o analysis for deep lien detection and risk assessment.")
 
 st.markdown("<br><hr><center>© 2025 Alpha Balde |USA Real Estate Advisor / AI Native</center>", unsafe_allow_html=True)
+
 
