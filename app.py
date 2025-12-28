@@ -83,7 +83,7 @@ languages = {
         "upload_label": "Upload Auction PDF",
         "analysis_header": "Financial & Legal Analysis",
         "save_btn": "Download Expert Report (PDF)",
-        "exp_text": "Banking Expert (Ex-Ecobank)",
+        "exp_text": "Former Bank Employee (Ecobank Guinea)",
         "landing_msg": "Please upload a document to begin the expert analysis.",
         "max_bid_label": "Max Bid (70% Rule)",
         "comps_label": "Market Comparison"
@@ -229,4 +229,5 @@ else:
         st.markdown("### 🚀 Market Research")
         st.write("Integrated links to Zillow, Trulia, Redfin, and Homes.com for instant market comps.")
 
-st.markdown("<br><hr><center>© 2025 Alpha Balde | USA Real Estate Advisor / AI Native</center>", unsafe_allow_html=True)
+st.markdown("<br><hr><center>© 2025 Alpha Balde | USA Real Estate Advisor / Pursuit AI Native</center>", unsafe_allow_html=True)
+
