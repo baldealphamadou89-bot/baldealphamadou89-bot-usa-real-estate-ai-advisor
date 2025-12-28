@@ -6,7 +6,7 @@ import base64
 import os
 
 # --- CONFIGURATION DE LA PAGE ---
-st.set_page_config(page_title="USA Real Estate AI Advisor", page_icon="🏠", layout="wide")
+st.set_page_config(page_title="Alpha Balde | Real Estate AI Advisor", page_icon="🏠", layout="wide")
 
 # --- RÉCUPÉRATION DES CLÉS (Secrets Streamlit) ---
 openai_key = st.secrets.get("OPENAI_API_KEY")
@@ -39,7 +39,7 @@ def create_pdf(address, analysis_text, lang):
 languages = {
     "English": {
         "welcome": "USA Real Estate AI Advisor",
-        "dev": "Developed by Alpha Balde | AI Native",
+        "dev": "Developed by Alpha Balde | Banking Expert (Ex-Ecobank)",
         "obj": "AI-driven analysis of US real estate auctions for secure investment.",
         "upload": "Upload Auction PDF",
         "analysis": "Financial & Legal Analysis",
@@ -47,7 +47,7 @@ languages = {
     },
     "Français": {
         "welcome": "USA Real Estate AI Advisor",
-        "dev": "Développé par Alpha Balde | AI Native,
+        "dev": "Développé par Alpha Balde | Expert Bancaire (Ex-Ecobank)",
         "obj": "Analyse par IA des enchères immobilières aux USA pour sécuriser vos investissements.",
         "upload": "Charger le PDF d'enchère",
         "analysis": "Analyse Financière & Juridique",
@@ -55,7 +55,7 @@ languages = {
     },
     "Español": {
         "welcome": "USA Real Estate AI Advisor",
-        "dev": "Desarrollado por Alpha Balde | AI Native",
+        "dev": "Desarrollado por Alpha Balde | Experto Bancario (Ex-Ecobank)",
         "obj": "Análisis por IA de subastas inmobiliarias en EE. UU. para inversiones seguras.",
         "upload": "Cargar PDF de la subasta",
         "analysis": "Análisis Financiero y Legal",
@@ -131,4 +131,3 @@ if uploaded_file:
             st.download_button(label=t['save'], data=pdf_data, file_name=f"Report_{address}.pdf", mime="application/pdf")
 
 st.markdown(f'<div style="text-align: center; margin-top: 50px; color: grey;">© 2025 Alpha Balde | Banking & AI Expertise</div>', unsafe_allow_html=True)
-
