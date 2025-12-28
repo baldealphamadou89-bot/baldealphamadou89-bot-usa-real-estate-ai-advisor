@@ -104,7 +104,7 @@ languages = {
         "analysis_header": "Análisis Financiero y Legal",
         "save_btn": "Descargar Informe de Experto (PDF)",
         "exp_text": "Experto Bancario (Ex-Ecobank)",
-        "landing_msg": "Por favor, cargue un documente para comenzar el análisis experto.",
+        "landing_msg": "Por favor, cargue un documente para commencer l'analyse d'expert.",
         "max_bid_label": "Puja Máxima (Regla 70%)",
         "comps_label": "Comparativa"
     }
@@ -184,8 +184,9 @@ if uploaded_file:
         with comps_area:
             st.markdown(f"### 🔍 {t['comps_label']}")
             st.markdown(f'<a href="https://www.zillow.com/homes/{q}_rb/" target="_blank" class="external-link">Zillow Comps</a>', unsafe_allow_html=True)
+            st.markdown(f'<a href="https://www.trulia.com/search/{q}" target="_blank" class="external-link">Trulia Comps</a>', unsafe_allow_html=True)
             st.markdown(f'<a href="https://www.redfin.com/whereonearth?search_location={q}" target="_blank" class="external-link">Redfin Comps</a>', unsafe_allow_html=True)
-            st.markdown(f'<a href="https://www.realtor.com/realestateandhomes-search/{q}" target="_blank" class="external-link">Realtor Comps</a>', unsafe_allow_html=True)
+            st.markdown(f'<a href="https://www.homes.com/search/?q={q}" target="_blank" class="external-link">Homes.com Comps</a>', unsafe_allow_html=True)
 
         # --- 7. AFFICHAGE DES RÉSULTATS (DASHBOARD) ---
         st.markdown("---")
@@ -224,6 +225,6 @@ else:
         st.write(f"Tailored rules for: {', '.join(states_list)}.")
     with c3:
         st.markdown("### 🚀 Market Research")
-        st.write("Integrated links to Zillow and Redfin for instant market comps.")
+        st.write("Integrated links to Zillow, Trulia, Redfin and Homes.com for instant market comps.")
 
 st.markdown("<br><hr><center>© 2025 Alpha Balde | USA Real Estate Advisor / AI Native</center>", unsafe_allow_html=True)
