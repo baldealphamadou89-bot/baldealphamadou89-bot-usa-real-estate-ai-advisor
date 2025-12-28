@@ -14,7 +14,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 2. STYLE CSS PERSONNALISÉ ---
+# --- 2. STYLE CSS PERSONNALISÉ (UI PREMIUM) ---
 st.markdown("""
     <style>
     .main { background-color: #f8f9fa; }
@@ -39,15 +39,10 @@ st.markdown("""
         color: #333; 
     }
     .external-link {
-        display: block;
-        padding: 10px;
-        margin: 5px 0;
-        background-color: #f1f3f4;
-        color: #1a73e8;
-        text-decoration: none;
-        border-radius: 5px;
-        text-align: center;
-        font-weight: bold;
+        display: block; padding: 10px; margin: 5px 0;
+        background-color: #f1f3f4; color: #1a73e8;
+        text-decoration: none; border-radius: 5px;
+        text-align: center; font-weight: bold; border: 1px solid #ddd;
     }
     h1, h2, h3 { color: #1e1e1e; font-family: 'Helvetica Neue', sans-serif; }
     </style>
@@ -89,7 +84,7 @@ languages = {
         "exp_text": "Banking Expert (Ex-Ecobank)",
         "landing_msg": "Please upload a document to begin the expert analysis.",
         "max_bid_label": "Max Bid (70% Rule)",
-        "comps_label": "Research Comps"
+        "comps_label": "Market Comparison"
     },
     "Français": {
         "welcome": "USA Real Estate AI Advisor",
@@ -100,7 +95,7 @@ languages = {
         "exp_text": "Expert Bancaire (Ex-Ecobank)",
         "landing_msg": "Veuillez charger un document pour commencer l'analyse d'expert.",
         "max_bid_label": "Offre Max (Règle 70%)",
-        "comps_label": "Comparer les Prix"
+        "comps_label": "Comparaison Marché"
     },
     "Español": {
         "welcome": "USA Real Estate AI Advisor",
@@ -109,9 +104,9 @@ languages = {
         "analysis_header": "Análisis Financiero y Legal",
         "save_btn": "Descargar Informe de Experto (PDF)",
         "exp_text": "Experto Bancario (Ex-Ecobank)",
-        "landing_msg": "Por favor, cargue un documento para comenzar el análisis experto.",
+        "landing_msg": "Por favor, cargue un documente para comenzar el análisis experto.",
         "max_bid_label": "Puja Máxima (Regla 70%)",
-        "comps_label": "Comparar Precios"
+        "comps_label": "Comparativa"
     }
 }
 
@@ -138,9 +133,8 @@ with st.sidebar:
     st.markdown("---")
     uploaded_file = st.file_uploader(t['upload_label'], type="pdf")
     
-    # Placeholder pour les liens Zillow (s'affiche après l'analyse)
-    st.markdown(f"### 🔍 {t['comps_label']}")
-    comps_container = st.container()
+    # Placeholder pour les liens de comparaison
+    comps_area = st.empty()
     
     st.markdown(f'<p style="font-size: 0.85em; color: #d32f2f; text-align: center; font-weight: bold;">{t["exp_text"]}</p>', unsafe_allow_html=True)
 
@@ -150,19 +144,31 @@ st.markdown(f"<p style='text-align: center; color: #d32f2f; font-weight: bold; f
 
 if uploaded_file:
     if "OPENAI_API_KEY" not in st.secrets:
-        st.error("Missing OpenAI API Key.")
+        st.error("Missing OpenAI API Key in Streamlit Secrets.")
     else:
         client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
         
-        with st.spinner(f"Analyse financière et recherche de l'adresse..."):
+        with st.spinner(f"Validation et analyse..."):
             reader = PyPDF2.PdfReader(uploaded_file)
             pdf_text = "".join([p.extract_text() for p in reader.pages])
 
+            # --- VÉRIFICATION DE COHÉRENCE DE L'ÉTAT ---
+            check_res = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[{"role": "user", "content": f"Return ONLY the US State name found in this text: {pdf_text[:1500]}"}]
+            )
+            detected_state = check_res.choices[0].message.content.strip()
+
+            if detected_state.lower() not in selected_state.lower() and selected_state.lower() not in detected_state.lower():
+                st.error(f"⚠️ Incohérence: État sélectionné ({selected_state}) ≠ État du PDF ({detected_state}).")
+                st.stop()
+
+            # --- ANALYSE ET ADRESSE ---
             response = client.chat.completions.create(
                 model="gpt-4o",
                 messages=[
                     {"role": "system", "content": f"Tu es Alpha Balde, expert bancaire. Analyse selon les lois de {selected_state}. Réponds en {selected_lang}."},
-                    {"role": "user", "content": f"Analyse les risques immobiliers : {pdf_text}"}
+                    {"role": "user", "content": f"Analyse les risques pour ce document. Note: L'offre max calculée est de ${max_bid}. : {pdf_text}"}
                 ]
             )
             report_text = response.choices[0].message.content
@@ -173,22 +179,19 @@ if uploaded_file:
             )
             address = addr_res.choices[0].message.content.strip()
 
-        # --- GÉNÉRATION DES LIENS EXTERNES ---
-        search_query = urllib.parse.quote(f"{address}, {selected_state}")
-        zillow_url = f"https://www.zillow.com/homes/{search_query}_rb/"
-        redfin_url = f"https://www.redfin.com/whereonearth?search_location={search_query}"
-        realtor_url = f"https://www.realtor.com/realestateandhomes-search/{search_query}"
+        # --- LIENS DE COMPARAISON ---
+        q = urllib.parse.quote(f"{address}, {selected_state}")
+        with comps_area:
+            st.markdown(f"### 🔍 {t['comps_label']}")
+            st.markdown(f'<a href="https://www.zillow.com/homes/{q}_rb/" target="_blank" class="external-link">Zillow Comps</a>', unsafe_allow_html=True)
+            st.markdown(f'<a href="https://www.redfin.com/whereonearth?search_location={q}" target="_blank" class="external-link">Redfin Comps</a>', unsafe_allow_html=True)
+            st.markdown(f'<a href="https://www.realtor.com/realestateandhomes-search/{q}" target="_blank" class="external-link">Realtor Comps</a>', unsafe_allow_html=True)
 
-        with comps_container:
-            st.markdown(f'<a href="{zillow_url}" target="_blank" class="external-link">🏠 View on Zillow</a>', unsafe_allow_html=True)
-            st.markdown(f'<a href="{redfin_url}" target="_blank" class="external-link">🏢 View on Redfin</a>', unsafe_allow_html=True)
-            st.markdown(f'<a href="{realtor_url}" target="_blank" class="external-link">🔍 View on Realtor.com</a>', unsafe_allow_html=True)
-
-        # --- 7. AFFICHAGE DES RÉSULTATS ---
+        # --- 7. AFFICHAGE DES RÉSULTATS (DASHBOARD) ---
         st.markdown("---")
         k1, k2, k3 = st.columns(3)
         k1.metric("Jurisdiction", selected_state)
-        k2.metric("ARV / Value", f"${arv:,}")
+        k2.metric("Analysis Mode", "Expert Banking")
         k3.metric(t['max_bid_label'], f"${max_bid:,.0f}")
 
         col1, col2 = st.columns([1, 1.3], gap="large")
@@ -196,9 +199,9 @@ if uploaded_file:
             st.subheader("📸 Property Visualization")
             if "MAPS_API_KEY" in st.secrets:
                 maps_url = f"https://maps.googleapis.com/maps/api/streetview?size=600x400&location={address}, {selected_state}&key={st.secrets['MAPS_API_KEY']}"
-                st.image(maps_url, use_container_width=True)
+                st.image(maps_url, use_container_width=True, caption=f"Address: {address}")
             else:
-                st.info(f"📍 Address: {address}")
+                st.info(f"📍 Property detected: {address}")
 
         with col2:
             st.subheader(f"📄 {t['analysis_header']}")
@@ -211,5 +214,16 @@ if uploaded_file:
 else:
     st.markdown("---")
     st.info(f"👋 **{t['landing_msg']}**")
+    
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.markdown("### 🏦 Banking Expertise")
+        st.write("Leveraging 5+ years at Ecobank Guinea in cash operations and CRM.")
+    with c2:
+        st.markdown("### ⚖️ State Compliance")
+        st.write(f"Tailored rules for: {', '.join(states_list)}.")
+    with c3:
+        st.markdown("### 🚀 Market Research")
+        st.write("Integrated links to Zillow and Redfin for instant market comps.")
 
 st.markdown("<br><hr><center>© 2025 Alpha Balde | USA Real Estate Advisor / AI Native</center>", unsafe_allow_html=True)
