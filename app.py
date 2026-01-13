@@ -101,3 +101,4 @@ with tab2:
         st.dataframe(df)
     else:
         st.write("Aucun historique pour le moment.")
+
